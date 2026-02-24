@@ -33,7 +33,7 @@ pub fn populate_network_list(
     list_box: &ListBox,
     networks: &[Network],
     config: &crate::config::Config,
-    wifi: &crate::dbus::network_manager::WifiManager,
+    wifi: &crate::dbus::network_manager::ConnectionManager,
     status: &gtk4::Label,
 ) {
     use gtk4::{glib, prelude::*};

@@ -1,5 +1,5 @@
 {
-  description = "A lightweight WiFi manager for Wayland compositors";
+  description = "A lightweight system control panel for Wayland compositors";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -60,7 +60,7 @@
 
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-        wifi-manager = craneLib.buildPackage (commonArgs // {
+        notashell = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
         });
 
@@ -74,19 +74,19 @@
         };
       in
       {
-        packages.default = wifi-manager;
+        packages.default = notashell;
 
         apps.default = {
           type = "app";
-          program = "${wifi-manager}/bin/wifi-manager";
+          program = "${notashell}/bin/notashell";
         };
 
         checks = {
-          inherit wifi-manager cargoClippy cargoFmt;
+          inherit notashell cargoClippy cargoFmt;
         };
 
         devShells.default = craneLib.devShell {
-          inputsFrom = [ wifi-manager ];
+          inputsFrom = [ notashell ];
           packages = with pkgs; [
             # Add any additional dev tools here
           ];

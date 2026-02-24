@@ -6,7 +6,7 @@ Cargo.lock
 result
 result-*
 
-# AUR files (belong in aur-wifi-manager-git/ only)
+# AUR files (belong in aur-notashell-git/ only)
 .SRCINFO
 *.pkg.tar.zst
 *.pkg.tar.zst.sig
@@ -14,7 +14,7 @@ pkg/
 *.log
 
 # AUR repo directory
-aur-wifi-manager-git/
+aur-notashell-git/
 
 # IDE / Editor
 .vscode/

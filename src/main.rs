@@ -10,9 +10,9 @@ use gtk4::Application;
 use gtk4::glib;
 use gtk4::prelude::*;
 
-/// A floating WiFi manager for Wayland compositors (Hyprland/Sway)
+/// A floating system control panel for Wayland compositors (Hyprland/Sway)
 #[derive(Parser, Debug)]
-#[command(name = "wifi-manager", version, about)]
+#[command(name = "notashell", version, about)]
 struct Args {
     /// Toggle the panel visibility (sends signal to running daemon)
     #[arg(long)]
@@ -21,9 +21,17 @@ struct Args {
     /// Reload config and CSS (sends signal to running daemon)
     #[arg(long)]
     reload: bool,
+
+    /// Run in foreground instead of daemonizing
+    #[arg(long, short)]
+    foreground: bool,
+
+    /// Internal: actual daemon process (not for end users)
+    #[arg(long, hide = true)]
+    daemon: bool,
 }
 
-const APP_ID: &str = "com.github.wifi_manager.WifiManager";
+const APP_ID: &str = "com.github.notashell.Notashell";
 
 fn main() {
     // Initialize logging
@@ -40,11 +48,11 @@ fn main() {
                     Ok(_) => log::info!("Toggle sent to running instance"),
                     Err(e) => {
                         log::error!("Failed to send toggle: {e}");
-                        eprintln!("Error: could not toggle — is wifi-manager running?");
+                        eprintln!("Error: could not toggle — is notashell running?");
                     }
                 }
             } else {
-                eprintln!("No running instance found. Start with: wifi-manager");
+                eprintln!("No running instance found. Start with: notashell");
             }
         });
         return;
@@ -62,18 +70,47 @@ fn main() {
                     }
                     Err(e) => {
                         log::error!("Failed to send reload: {e}");
-                        eprintln!("Error: could not reload — is wifi-manager running?");
+                        eprintln!("Error: could not reload — is notashell running?");
                     }
                 }
             } else {
-                eprintln!("No running instance found. Start with: wifi-manager");
+                eprintln!("No running instance found. Start with: notashell");
             }
         });
         return;
     }
 
+    // Daemonize: re-exec as a background process with detached stdio
+    if !args.foreground && !args.daemon {
+        let exe = std::env::current_exe().unwrap_or_else(|e| {
+            eprintln!("Failed to determine executable path: {e}");
+            std::process::exit(1);
+        });
+
+        match std::process::Command::new(exe)
+            .arg("--daemon")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+        {
+            Ok(child) => {
+                eprintln!(
+                    "notashell daemon started (pid {}). Use --toggle to show/hide.",
+                    child.id()
+                );
+            }
+            Err(e) => {
+                eprintln!("Failed to start daemon: {e}");
+                std::process::exit(1);
+            }
+        }
+
+        return;
+    }
+
     // Start the GTK application (daemon mode)
-    log::info!("Starting wifi-manager daemon");
+    log::info!("Starting notashell daemon");
 
     let app = Application::builder().application_id(APP_ID).build();
 
@@ -143,7 +180,7 @@ fn main() {
         // Connect to NetworkManager and set up the app controller
         let panel_state_for_app = panel_state.clone();
         glib::spawn_future_local(async move {
-            match dbus::network_manager::WifiManager::new().await {
+            match dbus::network_manager::ConnectionManager::new().await {
                 Ok(wifi) => {
                     log::info!("NetworkManager D-Bus connection established");
                     let config = config::Config::load();
@@ -171,7 +208,9 @@ fn main() {
         });
     });
 
-    app.run();
+    // Pass no CLI args to GTK — our own args (--toggle, --daemon, etc.)
+    // are already consumed by clap and would confuse GApplication.
+    app.run_with_args::<String>(&[]);
     
     // Allow pending D-Bus responses and GTK callbacks to complete before process exit.
     // Iterating the main context processes the teardown events gracefully.

@@ -1,5 +1,5 @@
 /* ============================================================================
- * Modern WiFi Manager Theme — Structural Redesign
+ * Notashell Theme — Structural Redesign
  * Inspired by macOS Control Center / SwayNC / AGS widgets
  * ============================================================================ */
 
@@ -12,7 +12,7 @@ window:not(tooltip) > box {
 
 /* ── Panel ─────────────────────────────────────────────────────────────────── */
 
-.wifi-panel {
+.notashell-panel {
   background: rgba(20, 22, 30, 0.95);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);

@@ -33,14 +33,14 @@ impl VolumeManager {
         C: FnOnce(Result<(), String>) + 'static,
     {
         let mut proplist = Proplist::new().ok_or("Failed to create PulseAudio proplist")?;
-        proplist.set_str(libpulse_binding::proplist::properties::APPLICATION_NAME, "wifi-manager")
+        proplist.set_str(libpulse_binding::proplist::properties::APPLICATION_NAME, "notashell")
             .map_err(|_| "Failed to set application name in proplist")?;
 
         let mainloop = Mainloop::new(None).ok_or("Failed to create PulseAudio GLib mainloop")?;
         
         let context = Context::new_with_proplist(
             &mainloop,
-            "wifi-manager-context",
+            "notashell-context",
             &proplist
         ).ok_or("Failed to create PulseAudio context")?;
 

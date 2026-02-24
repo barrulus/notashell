@@ -1,44 +1,44 @@
 # Maintainer: Vijay Papanaboina <https://github.com/Vijay-papanaboina>
 
-pkgname=wifi-manager-git
+pkgname=notashell-git
 pkgver=1
 pkgrel=1
-pkgdesc="A lightweight WiFi manager for Wayland compositors"
+pkgdesc="A lightweight system control panel for Wayland compositors"
 arch=('x86_64')
-url="https://github.com/Vijay-papanaboina/wifi-manager"
+url="https://github.com/Vijay-papanaboina/notashell"
 license=('MIT')
 depends=('gtk4' 'gtk4-layer-shell' 'networkmanager' 'bluez' 'libpulse' 'wayland' 'libxkbcommon')
 makedepends=('rust' 'cargo' 'git')
-provides=('wifi-manager')
-conflicts=('wifi-manager')
-source=("git+https://github.com/Vijay-papanaboina/wifi-manager.git")
+provides=('notashell')
+conflicts=('notashell')
+source=("git+https://github.com/Vijay-papanaboina/notashell.git")
 sha256sums=('SKIP')
 
 pkgver() {
-    cd "$srcdir/wifi-manager"
+    cd "$srcdir/notashell"
     printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {
-    cd "$srcdir/wifi-manager"
+    cd "$srcdir/notashell"
     export RUSTUP_TOOLCHAIN=stable
     cargo build --release --locked --all-features
 }
 
 check() {
-    cd "$srcdir/wifi-manager"
+    cd "$srcdir/notashell"
     cargo test --release --locked
 }
 
 package() {
-    cd "$srcdir/wifi-manager"
-    
+    cd "$srcdir/notashell"
+
     # Install binary
-    install -Dm755 "target/release/wifi-manager" "$pkgdir/usr/bin/wifi-manager"
-    
+    install -Dm755 "target/release/notashell" "$pkgdir/usr/bin/notashell"
+
     # Install license
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-    
+
     # Install README
     install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }

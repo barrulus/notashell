@@ -1,4 +1,4 @@
-//! High-level WiFi manager that wraps NetworkManager D-Bus interactions.
+//! High-level connection manager that wraps NetworkManager D-Bus interactions.
 //!
 //! Uses proxy types from `proxies.rs` to communicate with NetworkManager.
 
@@ -8,9 +8,9 @@ use zbus::zvariant::OwnedObjectPath;
 use super::access_point::{self, Band, Network, SecurityType};
 use super::proxies::*;
 
-/// The WiFi manager that wraps all NM D-Bus interactions.
+/// The connection manager that wraps all NM D-Bus interactions.
 #[derive(Clone)]
-pub struct WifiManager {
+pub struct ConnectionManager {
     connection: zbus::Connection,
     wifi_device_path: OwnedObjectPath,
 }
@@ -18,7 +18,7 @@ pub struct WifiManager {
 /// NM device type constant for WiFi
 const NM_DEVICE_TYPE_WIFI: u32 = 2;
 
-impl WifiManager {
+impl ConnectionManager {
     /// Connect to D-Bus and find the first WiFi device.
     pub async fn new() -> zbus::Result<Self> {
         let connection = zbus::Connection::system().await?;

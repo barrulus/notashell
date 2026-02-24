@@ -22,13 +22,13 @@ use gtk4::prelude::*;
 use crate::dbus::access_point::Network;
 use crate::dbus::bluetooth_device::BluetoothDevice;
 use crate::dbus::bluetooth_manager::BluetoothManager;
-use crate::dbus::network_manager::WifiManager;
+use crate::dbus::network_manager::ConnectionManager;
 use crate::ui::network_list;
 use crate::ui::window::PanelWidgets;
 
 /// Shared application state accessible from GTK callbacks.
 struct AppState {
-    wifi: WifiManager,
+    wifi: ConnectionManager,
     /// The network list — refreshed on scan.
     networks: Vec<Network>,
     /// Index of the currently selected network (for password entry).
@@ -43,7 +43,7 @@ struct AppState {
 /// and wire scan-on-show polling.
 pub fn setup(
     widgets: &PanelWidgets,
-    wifi: WifiManager,
+    wifi: ConnectionManager,
     scan_requested: std::sync::Arc<std::sync::atomic::AtomicBool>,
     panel_state: crate::daemon::PanelState,
 ) {
@@ -72,8 +72,8 @@ pub fn setup(
     controls::setup_controls(widgets);
 }
 
-/// Clone the WifiManager out of the RefCell (avoids holding borrow across await).
-fn get_wifi(state: &Rc<RefCell<AppState>>) -> WifiManager {
+/// Clone the ConnectionManager out of the RefCell (avoids holding borrow across await).
+fn get_wifi(state: &Rc<RefCell<AppState>>) -> ConnectionManager {
     state.borrow().wifi.clone()
 }
 

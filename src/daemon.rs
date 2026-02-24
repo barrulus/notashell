@@ -1,8 +1,8 @@
 //! D-Bus daemon service — exposes Toggle/Show/Hide methods on the session bus.
 //!
-//! This allows `wifi-manager --toggle` to control a running instance.
-//! The interface is registered at `com.github.wifi_manager.WifiManager`
-//! on the session bus at path `/com/github/wifi_manager/WifiManager`.
+//! This allows `notashell --toggle` to control a running instance.
+//! The interface is registered at `com.github.notashell.Notashell`
+//! on the session bus at path `/com/github/notashell/Notashell`.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,8 +10,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use zbus::interface;
 
 /// The D-Bus interface name and path.
-pub const DBUS_NAME: &str = "com.github.wifi_manager.Daemon";
-pub const DBUS_PATH: &str = "/com/github/wifi_manager/Daemon";
+pub const DBUS_NAME: &str = "com.github.notashell.Daemon";
+pub const DBUS_PATH: &str = "/com/github/notashell/Daemon";
 
 /// Thread-safe callback type for toggling visibility from D-Bus thread.
 type ToggleFn = Arc<dyn Fn(bool) + Send + Sync>;
@@ -65,7 +65,7 @@ struct DaemonInterface {
     state: PanelState,
 }
 
-#[interface(name = "com.github.wifi_manager.Daemon")]
+#[interface(name = "com.github.notashell.Daemon")]
 impl DaemonInterface {
     /// Toggle panel visibility.
     fn toggle(&self) {
