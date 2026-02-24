@@ -5,13 +5,13 @@ pkgver=1
 pkgrel=1
 pkgdesc="A lightweight system control panel for Wayland compositors"
 arch=('x86_64')
-url="https://github.com/Vijay-papanaboina/notashell"
+url="https://github.com/barrulus/notashell"
 license=('MIT')
 depends=('gtk4' 'gtk4-layer-shell' 'networkmanager' 'bluez' 'libpulse' 'wayland' 'libxkbcommon')
 makedepends=('rust' 'cargo' 'git')
 provides=('notashell')
 conflicts=('notashell')
-source=("git+https://github.com/Vijay-papanaboina/notashell.git")
+source=("git+https://github.com/barrulus/notashell.git")
 sha256sums=('SKIP')
 
 pkgver() {
