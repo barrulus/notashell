@@ -2,12 +2,10 @@
 
 A lightweight, native system control panel for Wayland compositors. Built with Rust, GTK4, and layer-shell — manages WiFi, Bluetooth, volume, brightness, and night mode as a proper alternative to `nmtui`, `nm-applet`, `blueman`, and rofi-based scripts.
 
+This is a direct fork of the work done in https://github.com/Vijay-papanaboina/wifi-manager
+
 > **Status:** notashell is under active development. Interfaces and configuration may change between releases.
 
-<p align="center">
-  <img src="examples/images/wifi1.webp" width="100%" />
-  <img src="examples/images/bluetooth1.webp" width="100%" />
-</p>
 
 ## Table of Contents
 
@@ -103,23 +101,6 @@ The following must be installed and running on your system:
 
 **System Dependencies:**
 
-**Arch Linux:**
-
-```sh
-sudo pacman -S gtk4 gtk4-layer-shell networkmanager bluez rust libpulse
-```
-
-**Fedora:**
-
-```sh
-sudo dnf install gtk4-devel gtk4-layer-shell-devel NetworkManager bluez rust cargo pulseaudio-libs-devel
-```
-
-**Ubuntu/Debian:**
-
-```sh
-sudo apt install libgtk-4-dev libgtk4-layer-shell-dev network-manager bluez cargo libpulse-dev
-```
 
 **Build:**
 
@@ -182,7 +163,6 @@ layer-rule {
 
 The layer namespace is `notashell`. You can target it with any niri `layer-rule` property — opacity, shadow, corner radius, etc.
 
-> **Note:** Niri does not currently support blur for layer-shell surfaces. This is tracked in [niri#54](https://github.com/YaLTeR/niri/issues/54).
 
 ## Configuration
 
