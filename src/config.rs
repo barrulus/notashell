@@ -6,6 +6,62 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+/// Default config file content written on first run.
+/// All options are commented out so the app uses its built-in defaults,
+/// but users can see and uncomment what they want to change.
+const DEFAULT_CONFIG: &str = r##"// notashell configuration
+// Uncomment and edit any option below to override the default.
+
+// Include additional config files (paths relative to this file)
+// include "theme.kdl"
+// include optional=true "local-overrides.kdl"
+
+// Window position on screen
+// Options: center, top-right, top-center, top-left,
+//          bottom-right, bottom-center, bottom-left,
+//          center-right, center-left
+// position "center"
+
+// Margin offsets in pixels (only effective on anchored edges)
+// margin {
+//     top 10
+//     right 10
+//     bottom 10
+//     left 10
+// }
+
+// Custom icons (Nerd Fonts)
+// icons {
+//     // Signal strength: weak, fair, good, strong
+//     signal "󰤟" "󰤢" "󰤥" "󰤨"
+//     // Alternative ASCII icons:
+//     // signal "▂___" "▂▄__" "▂▄▆_" "▂▄▆█"
+//     lock ""
+//     saved ""
+// }
+
+// Show the panel immediately when the daemon starts
+// show-on-start false
+
+// Theme overrides — generates CSS loaded after the default theme.
+// Only include rules you want to change; everything else uses defaults.
+// See examples/style-reference.css for all available selectors.
+//
+// theme {
+//     rule ".notashell-panel" {
+//         background "rgba(20, 22, 30, 0.95)"
+//         border-radius "16px"
+//     }
+//     rule ".scan-button:hover" {
+//         background "rgba(255, 255, 255, 0.12)"
+//         color "#ffffff"
+//     }
+//     rule ".network-row:hover" {
+//         background "rgba(180, 190, 254, 0.08)"
+//     }
+// }
+"##;
+
 /// Window position on screen.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Position {
@@ -103,7 +159,15 @@ impl Config {
         };
 
         if !path.exists() {
-            log::info!("No config file found, using defaults");
+            if let Some(parent) = path.parent() {
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    log::warn!("Failed to create config directory: {e}");
+                } else if let Err(e) = std::fs::write(&path, DEFAULT_CONFIG) {
+                    log::warn!("Failed to write default config: {e}");
+                } else {
+                    log::info!("Created default config at {path:?}");
+                }
+            }
             return Self::default();
         }
 
