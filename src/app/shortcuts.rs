@@ -32,17 +32,22 @@ pub(super) fn setup_reload_on_request(
 ) {
     let list_box = widgets.network_list_box.clone();
     let status = widgets.status_label.clone();
+    let window = widgets.window.clone();
 
     glib::timeout_add_local(std::time::Duration::from_millis(200), move || {
         if reload_requested.swap(false, std::sync::atomic::Ordering::Relaxed) {
-            log::info!("Reload requested - refreshing network list with new config");
+            log::info!("Reload requested - refreshing config, CSS, and network list");
             let state = Rc::clone(&state);
             let list_box = list_box.clone();
             let status = status.clone();
+            let window = window.clone();
 
             glib::spawn_future_local(async move {
+                // Reload config and re-apply position/margins
+                let config = crate::config::Config::load();
+                crate::ui::window::apply_position(&window, &config);
                 // Reload CSS
-                crate::ui::window::reload_css();
+                crate::ui::window::reload_css(&config);
                 // Refresh network list (which will reload config for icons)
                 refresh_list(&state, &list_box, &status).await;
             });

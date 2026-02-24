@@ -1,7 +1,7 @@
 /* ============================================================================
- * wifi-manager — CSS Class Reference
+ * notashell — CSS Class Reference
  *
- * Copy this file to ~/.config/wifi-manager/style.css and customize.
+ * Copy this file to ~/.config/notashell/style.css and customize.
  * User CSS has FULL override power over the default theme.
  * Only include the classes you want to change — everything else uses defaults.
  * ============================================================================ */
@@ -9,7 +9,7 @@
 /* ── Layout Structure ──────────────────────────────────────────────────────
  *
  *  window
- *   └── .wifi-panel                    Main panel container
+ *   └── .notashell-panel                    Main panel container
  *       ├── .header                    Header bar
  *       │   ├── .wifi-toggle           WiFi on/off switch
  *       │   ├── .status-label          "Connected to X" / "Not connected"
@@ -40,7 +40,7 @@
 
 /* ── Main Panel ──────────────────────────────────────────────────────────── */
 
-/* .wifi-panel {
+/* .notashell-panel {
   background: rgba(30, 30, 46, 0.95);
   border-radius: 14px;
   border: 1px solid rgba(180, 190, 254, 0.12);

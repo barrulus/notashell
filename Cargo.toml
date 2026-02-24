@@ -1,5 +1,5 @@
 [package]
-name = "wifi-manager"
+name = "notashell"
 version = "0.1.0"
 edition = "2024"
 
@@ -14,9 +14,8 @@ libpulse-glib-binding = "2.29.0"
 log = "0.4.29"
 memmap2 = "0.9.10"
 rustix = "1.1.3"
-serde = { version = "1", features = ["derive"] }
+kdl = "6"
 smithay-client-toolkit = "0.20.0"
-toml = "0.8"
 wayland-client = "0.31.12"
 wayland-protocols-wlr = "0.3.10"
 zbus = "5.13.2"

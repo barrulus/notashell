@@ -1,0 +1,51 @@
+// notashell configuration
+// Place at: ~/.config/notashell/config.kdl
+
+// Include additional config files (paths relative to this file)
+// include "theme.kdl"
+// include optional=true "local-overrides.kdl"
+
+// Window position on screen
+// Options: center, top-right, top-center, top-left,
+//          bottom-right, bottom-center, bottom-left,
+//          center-right, center-left
+position "top-right"
+
+// Margin offsets in pixels (only effective on anchored edges)
+margin {
+    top 10
+    right 10
+    bottom 10
+    left 10
+}
+
+// Custom icons (Nerd Fonts)
+icons {
+    // Signal strength: weak, fair, good, strong
+    signal "󰤟" "󰤢" "󰤥" "󰤨"
+    // Alternative ASCII icons:
+    // signal "▂___" "▂▄__" "▂▄▆_" "▂▄▆█"
+    lock ""
+    saved ""
+}
+
+// Show the panel immediately when the daemon starts
+show-on-start false
+
+// Theme overrides — generates CSS loaded after the default theme.
+// Only include rules you want to change; everything else uses defaults.
+// See examples/style-reference.css for all available selectors.
+//
+// theme {
+//     rule ".notashell-panel" {
+//         background "rgba(20, 22, 30, 0.95)"
+//         border-radius "16px"
+//     }
+//     rule ".scan-button:hover" {
+//         background "rgba(255, 255, 255, 0.12)"
+//         color "#ffffff"
+//     }
+//     rule ".network-row:hover" {
+//         background "rgba(180, 190, 254, 0.08)"
+//     }
+// }

@@ -14,6 +14,8 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use super::{device_list, header, network_list, password_dialog, controls_panel};
 use crate::config::{Config, Position};
 
+use std::cell::RefCell;
+
 /// Minimum pixel height for list boxes (shows ~3 items)
 pub const MIN_LIST_HEIGHT: i32 = 220;
 /// Maximum pixel height for list boxes before scrolling (shows ~4 items)
@@ -21,6 +23,11 @@ pub const MAX_LIST_HEIGHT: i32 = 280;
 
 /// Default width of the main panel window
 pub const WINDOW_WIDTH: i32 = 340;
+
+thread_local! {
+    /// Tracks the user theme CSS provider so we can remove it on reload.
+    static USER_CSS_PROVIDER: RefCell<Option<CssProvider>> = const { RefCell::new(None) };
+}
 
 /// All UI handles needed by the app controller.
 #[allow(dead_code)]
@@ -57,13 +64,13 @@ pub fn build_window(app: &Application) -> PanelWidgets {
 
     let window = ApplicationWindow::builder()
         .application(app)
-        .title("WiFi Manager")
+        .title("Notashell")
         .default_width(WINDOW_WIDTH)
         .build();
 
     // Initialize layer shell
     window.init_layer_shell();
-    window.set_namespace(Some("wifi-manager"));
+    window.set_namespace(Some("notashell"));
     window.set_layer(Layer::Top);
     window.set_keyboard_mode(KeyboardMode::OnDemand);
 
@@ -75,7 +82,7 @@ pub fn build_window(app: &Application) -> PanelWidgets {
 
     // Main container
     let main_box = GtkBox::new(Orientation::Vertical, 0);
-    main_box.add_css_class("wifi-panel");
+    main_box.add_css_class("notashell-panel");
 
     // Header
     let header = header::build_header();
@@ -186,7 +193,7 @@ pub fn build_window(app: &Application) -> PanelWidgets {
     window.set_child(Some(&main_box));
 
     // Load CSS theme
-    load_css();
+    load_css(&config);
 
     log::info!("Layer-shell panel built (hidden)");
 
@@ -214,8 +221,8 @@ pub fn build_window(app: &Application) -> PanelWidgets {
     }
 }
 
-/// Load the default CSS theme and optional user overrides.
-fn load_css() {
+/// Load the default CSS theme and optional user theme overrides from config.
+fn load_css(config: &Config) {
     let display = gdk::Display::default().expect("Could not get default display");
 
     // Load bundled default theme
@@ -229,54 +236,47 @@ fn load_css() {
     );
     log::info!("Default CSS theme loaded");
 
-    // Load optional user theme override
-    if let Some(config_dir) = dirs_config_path() {
-        let user_css_path = config_dir.join("style.css");
-        if user_css_path.exists() {
-            let user_provider = CssProvider::new();
-            user_provider.load_from_path(user_css_path.to_str().unwrap_or_default());
-            gtk4::style_context_add_provider_for_display(
-                &display,
-                &user_provider,
-                gtk4::STYLE_PROVIDER_PRIORITY_USER,
-            );
-            log::info!("User CSS theme loaded from {:?}", user_css_path);
-        }
-    }
+    // Apply user theme CSS from config
+    apply_user_theme(config);
 }
 
-/// Reload user CSS (for --reload flag).
-pub fn reload_css() {
+/// Reload user theme CSS (for --reload flag).
+pub fn reload_css(config: &Config) {
+    apply_user_theme(config);
+}
+
+/// Apply (or replace) the user theme CSS provider.
+fn apply_user_theme(config: &Config) {
     let display = gdk::Display::default().expect("Could not get default display");
+    let theme_css = config.theme_css();
 
-    // Reload optional user theme override
-    if let Some(config_dir) = dirs_config_path() {
-        let user_css_path = config_dir.join("style.css");
-        if user_css_path.exists() {
-            let user_provider = CssProvider::new();
-            user_provider.load_from_path(user_css_path.to_str().unwrap_or_default());
-            gtk4::style_context_add_provider_for_display(
-                &display,
-                &user_provider,
-                gtk4::STYLE_PROVIDER_PRIORITY_USER,
-            );
-            log::info!("User CSS reloaded from {:?}", user_css_path);
+    // Remove old user provider if present
+    USER_CSS_PROVIDER.with(|cell| {
+        if let Some(old) = cell.borrow_mut().take() {
+            gtk4::style_context_remove_provider_for_display(&display, &old);
         }
-    }
-}
+    });
 
-/// Get the config directory: ~/.config/wifi-manager/
-fn dirs_config_path() -> Option<std::path::PathBuf> {
-    let home = std::env::var("HOME").ok()?;
-    Some(
-        std::path::PathBuf::from(home)
-            .join(".config")
-            .join("wifi-manager"),
-    )
+    if theme_css.is_empty() {
+        return;
+    }
+
+    let provider = CssProvider::new();
+    provider.load_from_string(theme_css);
+    gtk4::style_context_add_provider_for_display(
+        &display,
+        &provider,
+        gtk4::STYLE_PROVIDER_PRIORITY_USER,
+    );
+    log::info!("User theme CSS applied ({} bytes)", theme_css.len());
+
+    USER_CSS_PROVIDER.with(|cell| {
+        *cell.borrow_mut() = Some(provider);
+    });
 }
 
 /// Apply window position and margins from config to a layer-shell window.
-fn apply_position(window: &ApplicationWindow, config: &Config) {
+pub fn apply_position(window: &ApplicationWindow, config: &Config) {
     // Set anchors based on position
     let (top, bottom, left, right) = match config.position {
         Position::Center => (false, false, false, false),
