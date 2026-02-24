@@ -375,6 +375,133 @@ switch slider {
   background: rgba(255, 123, 99, 0.1);
 }
 
+/* ── Controls Panel ────────────────────────────────────────────────────────── */
+
+.controls-panel {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.controls-panel scale trough {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  min-height: 6px;
+}
+
+.controls-panel scale trough highlight {
+  background: #3584e4;
+  border-radius: 99px;
+}
+
+.controls-panel scale slider {
+  background: #ffffff;
+  border-radius: 50%;
+  min-width: 16px;
+  min-height: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.controls-panel scale value {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+}
+
+/* ── Audio Mixer ──────────────────────────────────────────────────────────── */
+
+.mixer-container {
+  background: transparent;
+  padding: 4px 0;
+}
+
+.mixer-section-header {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mixer-list {
+  background: transparent;
+}
+
+.mixer-scroll scrollbar slider {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  min-width: 4px;
+}
+
+.mixer-row {
+  padding: 8px 12px;
+  margin: 2px 8px;
+  border-radius: 12px;
+  transition: all 150ms ease;
+}
+
+.mixer-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mixer-row.default {
+  background: rgba(53, 132, 228, 0.12);
+}
+
+.mixer-row.default .mixer-name {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.mixer-icon {
+  font-size: 14px;
+  min-width: 20px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mixer-row.default .mixer-icon {
+  color: #3584e4;
+}
+
+.mixer-name {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mixer-scale trough {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  min-height: 4px;
+}
+
+.mixer-scale trough highlight {
+  background: #3584e4;
+  border-radius: 99px;
+}
+
+.mixer-scale.muted trough highlight {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mixer-scale slider {
+  background: #ffffff;
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.mixer-mute-btn {
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 150ms ease;
+}
+
+.mixer-mute-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
 /* ── Tooltips ──────────────────────────────────────────────────────────────── */
 
 tooltip {

@@ -10,31 +10,79 @@
  *
  *  window
  *   └── .notashell-panel                    Main panel container
- *       ├── .header                    Header bar
- *       │   ├── .wifi-toggle           WiFi on/off switch
- *       │   ├── .status-label          "Connected to X" / "Not connected"
- *       │   └── .scan-button           Refresh/scan button
- *       ├── .loading-spinner           Shown while scanning
- *       ├── .network-scroll            Scrollable area
- *       │   └── .network-list          ListBox container
- *       │       ├── .network-row       One per network (also: .connected, .saved)
- *       │       │   └── .network-row-content   Inner horizontal layout
- *       │       │       ├── .signal-icon       Signal bars (also: .signal-strong/good/fair/weak)
- *       │       │       ├── .ssid-label        Network name
- *       │       │       ├── .band-badge        "5G" badge (5 GHz only)
- *       │       │       ├── .security-icon     Lock/unlock icon
- *       │       │       ├── .connected-icon    ✓ checkmark (connected only)
- *       │       │       ├── .saved-label       "saved" text (saved only)
- *       │       │       └── .network-menu-btn  ⋮ three-dot menu (saved/connected)
- *       │       │           └── .network-popover   Forget popover menu
- *       │       └── .empty-label       "No networks found" placeholder
- *       └── .password-revealer         Slide-down animation wrapper
- *           └── .password-section      Password dialog container
- *               ├── .password-entry    Password input field
- *               ├── .error-label       Error message text
- *               └── .password-buttons  Button row
- *                   ├── .cancel-button
- *                   └── .connect-button
+ *       ├── .header                         Header bar
+ *       │   ├── .tab-bar                    Tab switcher row
+ *       │   │   ├── .tab-button             Wi-Fi tab (also: :checked)
+ *       │   │   ├── .tab-button             Bluetooth tab
+ *       │   │   └── .tab-button             Audio tab
+ *       │   ├── .header-top                 Top row (switch, title, scan)
+ *       │   │   ├── .wifi-toggle            Power on/off switch
+ *       │   │   ├── .header-info            Title + status box
+ *       │   │   │   ├── .header-title       "Wi-Fi" / "Bluetooth" / "Audio"
+ *       │   │   │   └── .status-label       "Connected to X" / "Not connected"
+ *       │   │   └── .scan-button            Refresh/scan button
+ *       │   └── .header-separator           Line between header and content
+ *       │
+ *       ├── .content-stack                  Switches between pages
+ *       │   │
+ *       │   ├── [wifi page]
+ *       │   │   ├── .loading-spinner        Shown while scanning
+ *       │   │   ├── .network-scroll         Scrollable area
+ *       │   │   │   └── .network-list       ListBox container
+ *       │   │   │       ├── .network-row    One per network (also: .connected, .saved)
+ *       │   │   │       │   └── .network-row-content   Inner horizontal layout
+ *       │   │   │       │       ├── .signal-icon       Signal bars (.signal-strong/good/fair/weak)
+ *       │   │   │       │       ├── .ssid-label        Network name
+ *       │   │   │       │       ├── .band-badge        "5G" badge (5 GHz only)
+ *       │   │   │       │       ├── .security-icon     Lock/unlock icon
+ *       │   │   │       │       ├── .connected-icon    Checkmark (connected only)
+ *       │   │   │       │       ├── .saved-label       "saved" text (saved only)
+ *       │   │   │       │       └── .network-menu-btn  Three-dot menu (saved/connected)
+ *       │   │   │       │           └── .network-popover   Forget popover menu
+ *       │   │   │       └── .empty-label    "No networks found" placeholder
+ *       │   │   └── .password-revealer      Slide-down animation wrapper
+ *       │   │       └── .password-section   Password dialog container
+ *       │   │           ├── .password-entry Password input field
+ *       │   │           ├── .error-label    Error message text
+ *       │   │           └── .password-buttons Button row
+ *       │   │               ├── .cancel-button
+ *       │   │               └── .connect-button
+ *       │   │
+ *       │   ├── [bluetooth page]
+ *       │   │   ├── .loading-spinner        Shown while scanning
+ *       │   │   └── .device-scroll          Scrollable area
+ *       │   │       └── .device-list        ListBox container
+ *       │   │           ├── .device-row     One per device (also: .connected, .paired)
+ *       │   │           │   └── .device-row-content    Inner horizontal layout
+ *       │   │           │       ├── .device-icon       Category icon
+ *       │   │           │       ├── .device-row-info   Name + subtitle box
+ *       │   │           │       │   ├── .device-name   Device name
+ *       │   │           │       │   └── .device-subtitle Status text
+ *       │   │           │       ├── .trusted-icon      Trusted badge
+ *       │   │           │       └── .device-menu-btn   Three-dot menu
+ *       │   │           │           └── .device-popover Remove popover menu
+ *       │   │           └── .empty-label    "No devices found" placeholder
+ *       │   │
+ *       │   └── [audio page]
+ *       │       └── .mixer-scroll           Scrollable area
+ *       │           └── .mixer-container    Vertical box with sections
+ *       │               ├── .mixer-section-header  "Outputs" / "Inputs" / "Applications"
+ *       │               └── .mixer-list            ListBox per section
+ *       │                   ├── .mixer-row         One per device/app (also: .default)
+ *       │                   │   └── .mixer-row-content Inner horizontal layout
+ *       │                   │       ├── .mixer-icon    Device/app icon
+ *       │                   │       ├── .mixer-name    Device/app name
+ *       │                   │       ├── .mixer-scale   Volume slider (also: .muted)
+ *       │                   │       └── .mixer-mute-btn Mute toggle button
+ *       │                   └── .empty-label   "No devices" / "No apps playing"
+ *       │
+ *       └── .controls-panel                 Bottom footer (collapsible)
+ *           ├── [toggle button]             Expand/collapse (flat circular)
+ *           └── [revealer]                  Animated slide-down
+ *               ├── [brightness row]        Icon + Scale
+ *               ├── [volume row]            Icon + Scale
+ *               ├── [night mode row]        Icon + Scale
+ *               └── [power row]             Logout / Suspend / Reboot / Power Off
  *
  * ────────────────────────────────────────────────────────────────────────── */
 
@@ -53,6 +101,12 @@
   border-bottom: 1px solid rgba(180, 190, 254, 0.06);
 } */
 
+/* .header-title {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+} */
+
 /* .status-label {
   color: rgba(205, 214, 244, 0.9);
   font-size: 13px;
@@ -66,6 +120,30 @@
 
 /* .wifi-toggle {
   margin-right: 8px;
+} */
+
+/* ── Tab Bar ─────────────────────────────────────────────────────────────── */
+
+/* .tab-bar {
+  padding: 8px 20px 0;
+} */
+
+/* .tab-button {
+  background: transparent;
+  color: rgba(205, 214, 244, 0.5);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+} */
+
+/* .tab-button:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+} */
+
+/* .tab-button:checked {
+  background: rgba(137, 180, 250, 0.15);
+  color: rgba(137, 180, 250, 0.9);
 } */
 
 /* ── Loading ─────────────────────────────────────────────────────────────── */
@@ -107,7 +185,7 @@
   opacity: 0.85;
 } */
 
-/* ── Row Elements ────────────────────────────────────────────────────────── */
+/* ── Network Row Elements ────────────────────────────────────────────────── */
 
 /* .ssid-label {
   color: rgba(205, 214, 244, 0.95);
@@ -153,7 +231,7 @@
   color: rgba(205, 214, 244, 0.3);
 } */
 
-/* ── Menu Button & Popover ───────────────────────────────────────────────── */
+/* ── Network Menu Button & Popover ─────────────────────────────────────── */
 
 /* .network-menu-btn {
   color: rgba(205, 214, 244, 0.4);
@@ -217,25 +295,6 @@
   font-size: 12px;
 } */
 
-/* ── Tab Bar ─────────────────────────────────────────────────────────────── */
-
-/* .tab-bar {
-  padding: 8px 20px 0;
-} */
-
-/* .tab-button {
-  background: transparent;
-  color: rgba(205, 214, 244, 0.5);
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-} */
-
-/* .tab-button:checked {
-  background: rgba(137, 180, 250, 0.15);
-  color: rgba(137, 180, 250, 0.9);
-} */
-
 /* ── Bluetooth Device List ───────────────────────────────────────────────── */
 
 /* .device-list {
@@ -294,4 +353,149 @@
   background: rgba(30, 30, 46, 0.98);
   border: 1px solid rgba(180, 190, 254, 0.12);
   border-radius: 10px;
+} */
+
+/* ── Audio Mixer ─────────────────────────────────────────────────────────── */
+
+/* .mixer-container {
+  background: transparent;
+} */
+
+/* .mixer-section-header {
+  color: rgba(205, 214, 244, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+} */
+
+/* .mixer-list {
+  background: transparent;
+} */
+
+/* .mixer-scroll scrollbar slider {
+  background: rgba(180, 190, 254, 0.1);
+  border-radius: 99px;
+  min-width: 4px;
+} */
+
+/* .mixer-row {
+  padding: 8px 12px;
+  margin: 2px 8px;
+  border-radius: 12px;
+} */
+
+/* .mixer-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+} */
+
+/* Default device highlight */
+/* .mixer-row.default {
+  background: rgba(137, 180, 250, 0.12);
+} */
+
+/* .mixer-row.default .mixer-name {
+  color: #ffffff;
+  font-weight: 700;
+} */
+
+/* .mixer-row.default .mixer-icon {
+  color: rgba(137, 180, 250, 0.9);
+} */
+
+/* .mixer-icon {
+  font-size: 14px;
+  min-width: 20px;
+  color: rgba(205, 214, 244, 0.6);
+} */
+
+/* .mixer-name {
+  color: rgba(205, 214, 244, 0.9);
+  font-size: 12px;
+  font-weight: 500;
+} */
+
+/* Volume slider track */
+/* .mixer-scale trough {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  min-height: 4px;
+} */
+
+/* .mixer-scale trough highlight {
+  background: rgba(137, 180, 250, 0.8);
+  border-radius: 99px;
+} */
+
+/* Muted slider dimmed */
+/* .mixer-scale.muted trough highlight {
+  background: rgba(255, 255, 255, 0.15);
+} */
+
+/* .mixer-scale slider {
+  background: #ffffff;
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+} */
+
+/* .mixer-mute-btn {
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  color: rgba(205, 214, 244, 0.5);
+} */
+
+/* .mixer-mute-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+} */
+
+/* ── Controls Panel (Bottom Footer) ──────────────────────────────────────── */
+
+/* .controls-panel {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+} */
+
+/* .controls-panel scale trough {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  min-height: 6px;
+} */
+
+/* .controls-panel scale trough highlight {
+  background: rgba(137, 180, 250, 0.8);
+  border-radius: 99px;
+} */
+
+/* .controls-panel scale slider {
+  background: #ffffff;
+  border-radius: 50%;
+  min-width: 16px;
+  min-height: 16px;
+} */
+
+/* .controls-panel scale value {
+  color: rgba(205, 214, 244, 0.5);
+  font-size: 11px;
+} */
+
+/* ── Tooltips ────────────────────────────────────────────────────────────── */
+
+/* tooltip {
+  background: rgba(3, 17, 45, 0.5);
+  color: #ffffff;
+  border-radius: 8px;
+} */
+
+/* ── Dialog Buttons ──────────────────────────────────────────────────────── */
+
+/* window.dialog button {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  font-weight: 600;
+} */
+
+/* window.dialog button:last-child {
+  background: rgba(224, 27, 36, 0.8);
+  color: #ffffff;
 } */
