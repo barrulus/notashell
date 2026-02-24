@@ -66,7 +66,6 @@ impl ControlsPanel {
     pub fn volume_scale(&self) -> &Scale { &self.volume_scale }
     pub fn volume_icon(&self) -> &Image { &self.volume_icon }
     pub fn night_mode_scale(&self) -> &Scale { &self.night_mode_scale }
-    pub fn revealer(&self) -> &Revealer { &self.revealer }
     pub fn toggle_button(&self) -> &ToggleButton { &self.toggle_button }
 
     pub fn new() -> Self {
