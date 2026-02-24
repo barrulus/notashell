@@ -6,6 +6,7 @@
 //! - `live_updates` — D-Bus signal subscriptions for real-time changes
 //! - `shortcuts` — Escape key, reload polling
 
+mod audio;
 mod bluetooth;
 mod bt_live_updates;
 mod connection;
@@ -19,6 +20,7 @@ use std::rc::Rc;
 
 use gtk4::prelude::*;
 
+use crate::controls::audio::{AudioApp, AudioManager, AudioSink, AudioSource};
 use crate::dbus::access_point::Network;
 use crate::dbus::bluetooth_device::BluetoothDevice;
 use crate::dbus::bluetooth_manager::BluetoothManager;
@@ -37,6 +39,12 @@ struct AppState {
     bluetooth: Option<BluetoothManager>,
     /// Bluetooth device list — refreshed on BT scan.
     bt_devices: Vec<BluetoothDevice>,
+    /// Audio mixer manager (None if PulseAudio unavailable).
+    audio: Option<Rc<AudioManager>>,
+    /// Audio state caches.
+    audio_sinks: Vec<AudioSink>,
+    audio_sources: Vec<AudioSource>,
+    audio_apps: Vec<AudioApp>,
 }
 
 /// Set up all event handlers, kick off the initial scan, start live updates,
@@ -53,6 +61,10 @@ pub fn setup(
         selected_index: None,
         bluetooth: None,
         bt_devices: Vec::new(),
+        audio: None,
+        audio_sinks: Vec::new(),
+        audio_sources: Vec::new(),
+        audio_apps: Vec::new(),
     }));
 
     scanning::setup_scan_button(widgets, Rc::clone(&state));
@@ -64,10 +76,15 @@ pub fn setup(
     bluetooth::setup_bluetooth(widgets, Rc::clone(&state));
     bt_live_updates::setup_bt_live_updates(widgets, Rc::clone(&state));
     setup_bt_scan_button(widgets, Rc::clone(&state));
+    audio::setup_audio(widgets, Rc::clone(&state));
+    audio::setup_audio_scan_button(widgets, Rc::clone(&state));
+    audio::setup_audio_tab_leave(widgets);
     setup_wifi_tab_sync(widgets, Rc::clone(&state));
     let reload_requested = panel_state.reload_requested.clone();
+    let resize_requested = panel_state.resize_requested.clone();
     shortcuts::setup_escape_key(widgets, panel_state);
     shortcuts::setup_reload_on_request(widgets, Rc::clone(&state), reload_requested);
+    shortcuts::setup_resize_on_request(widgets, resize_requested);
     scanning::setup_initial_state(widgets, Rc::clone(&state));
     controls::setup_controls(widgets);
 }

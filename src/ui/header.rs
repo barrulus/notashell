@@ -14,6 +14,7 @@ pub struct HeaderWidgets {
     pub scan_button: Button,
     pub wifi_tab: ToggleButton,
     pub bt_tab: ToggleButton,
+    pub audio_tab: ToggleButton,
 }
 
 /// Build the header containing:
@@ -75,11 +76,17 @@ pub fn build_header() -> HeaderWidgets {
     bt_tab.add_css_class("tab-button");
     bt_tab.set_hexpand(true);
 
-    // Mutual exclusion: clicking one deactivates the other
+    let audio_tab = ToggleButton::with_label("󰕾  Audio");
+    audio_tab.add_css_class("tab-button");
+    audio_tab.set_hexpand(true);
+
+    // Mutual exclusion: clicking one deactivates the others
     wifi_tab.set_group(Some(&bt_tab));
+    audio_tab.set_group(Some(&bt_tab));
 
     tab_bar.append(&wifi_tab);
     tab_bar.append(&bt_tab);
+    tab_bar.append(&audio_tab);
 
     container.append(&tab_bar);
     container.append(&top_row);
@@ -92,5 +99,6 @@ pub fn build_header() -> HeaderWidgets {
         scan_button,
         wifi_tab,
         bt_tab,
+        audio_tab,
     }
 }

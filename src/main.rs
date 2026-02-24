@@ -22,6 +22,10 @@ struct Args {
     #[arg(long)]
     reload: bool,
 
+    /// Toggle expanded/compact panel size (sends signal to running daemon)
+    #[arg(long)]
+    resize: bool,
+
     /// Run in foreground instead of daemonizing
     #[arg(long, short)]
     foreground: bool,
@@ -80,6 +84,25 @@ fn main() {
         return;
     }
 
+    if args.resize {
+        // Send Resize() to running daemon and exit
+        let rt = glib::MainContext::default();
+        rt.block_on(async {
+            if daemon::is_instance_running().await {
+                match daemon::send_resize().await {
+                    Ok(_) => log::info!("Resize sent to running instance"),
+                    Err(e) => {
+                        log::error!("Failed to send resize: {e}");
+                        eprintln!("Error: could not resize — is notashell running?");
+                    }
+                }
+            } else {
+                eprintln!("No running instance found. Start with: notashell");
+            }
+        });
+        return;
+    }
+
     // Daemonize: re-exec as a background process with detached stdio
     if !args.foreground && !args.daemon {
         let exe = std::env::current_exe().unwrap_or_else(|e| {
@@ -87,11 +110,16 @@ fn main() {
             std::process::exit(1);
         });
 
+        // Open a log file for daemon stderr so env_logger output is captured
+        let log_file = std::fs::File::create("/tmp/notashell.log")
+            .map(std::process::Stdio::from)
+            .unwrap_or_else(|_| std::process::Stdio::null());
+
         match std::process::Command::new(exe)
             .arg("--daemon")
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+            .stderr(log_file)
             .spawn()
         {
             Ok(child) => {

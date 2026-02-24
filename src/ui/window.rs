@@ -11,7 +11,7 @@ use gtk4::{
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
-use super::{device_list, header, network_list, password_dialog, controls_panel};
+use super::{device_list, header, mixer, network_list, password_dialog, controls_panel};
 use crate::config::{Config, Position};
 
 use std::cell::RefCell;
@@ -20,6 +20,8 @@ use std::cell::RefCell;
 pub const MIN_LIST_HEIGHT: i32 = 220;
 /// Maximum pixel height for list boxes before scrolling (shows ~4 items)
 pub const MAX_LIST_HEIGHT: i32 = 280;
+/// Expanded maximum height for list boxes
+pub const EXPANDED_MAX_LIST_HEIGHT: i32 = 560;
 
 /// Default width of the main panel window
 pub const WINDOW_WIDTH: i32 = 340;
@@ -39,6 +41,7 @@ pub struct PanelWidgets {
     pub scan_button: gtk4::Button,
     pub wifi_tab: gtk4::ToggleButton,
     pub bt_tab: gtk4::ToggleButton,
+    pub audio_tab: gtk4::ToggleButton,
     // Wi-Fi page
     pub network_list_box: ListBox,
     pub network_scroll: gtk4::ScrolledWindow,
@@ -52,6 +55,11 @@ pub struct PanelWidgets {
     pub bt_list_box: ListBox,
     pub bt_scroll: gtk4::ScrolledWindow,
     pub bt_spinner: gtk4::Spinner,
+    // Audio page
+    pub audio_sinks_list: ListBox,
+    pub audio_sources_list: ListBox,
+    pub audio_apps_list: ListBox,
+    pub audio_scroll: gtk4::ScrolledWindow,
     // Content stack
     pub content_stack: Stack,
     // Controls panel
@@ -144,6 +152,13 @@ pub fn build_window(app: &Application) -> PanelWidgets {
 
     content_stack.add_named(&bt_page, Some("bluetooth"));
 
+    // ── Audio mixer page ────────────────────────────────────────
+    let audio_page = GtkBox::new(Orientation::Vertical, 0);
+    let mixer_widgets = mixer::build_mixer();
+    audio_page.append(&mixer_widgets.scroll);
+
+    content_stack.add_named(&audio_page, Some("audio"));
+
     // Start on Wi-Fi page
     content_stack.set_visible_child_name("wifi");
     main_box.append(&content_stack);
@@ -189,6 +204,14 @@ pub fn build_window(app: &Application) -> PanelWidgets {
             }
         });
     }
+    {
+        let stack = content_stack.clone();
+        header.audio_tab.connect_toggled(move |btn| {
+            if btn.is_active() {
+                stack.set_visible_child_name("audio");
+            }
+        });
+    }
 
     window.set_child(Some(&main_box));
 
@@ -205,6 +228,7 @@ pub fn build_window(app: &Application) -> PanelWidgets {
         scan_button: header.scan_button,
         wifi_tab: header.wifi_tab,
         bt_tab: header.bt_tab,
+        audio_tab: header.audio_tab,
         network_list_box: list_box,
         network_scroll: scrolled,
         spinner,
@@ -216,6 +240,10 @@ pub fn build_window(app: &Application) -> PanelWidgets {
         bt_list_box,
         bt_scroll: bt_scrolled,
         bt_spinner,
+        audio_sinks_list: mixer_widgets.sinks_list,
+        audio_sources_list: mixer_widgets.sources_list,
+        audio_apps_list: mixer_widgets.apps_list,
+        audio_scroll: mixer_widgets.scroll,
         content_stack,
         controls,
     }

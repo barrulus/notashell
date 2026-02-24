@@ -26,6 +26,8 @@ pub struct PanelState {
     pub scan_requested: Arc<AtomicBool>,
     /// Flag set by reload() — polled by GTK main thread to reload config/CSS.
     pub reload_requested: Arc<AtomicBool>,
+    /// Flag set by resize() — polled by GTK main thread to toggle expanded mode.
+    pub resize_requested: Arc<AtomicBool>,
     /// Callback to toggle visibility — dispatches to GTK main thread.
     toggle_fn: ToggleFn,
 }
@@ -36,6 +38,7 @@ impl PanelState {
             visible: Arc::new(AtomicBool::new(false)),
             scan_requested: Arc::new(AtomicBool::new(false)),
             reload_requested: Arc::new(AtomicBool::new(false)),
+            resize_requested: Arc::new(AtomicBool::new(false)),
             toggle_fn: Arc::new(toggle_fn),
         }
     }
@@ -91,6 +94,12 @@ impl DaemonInterface {
         self.state.reload_requested.store(true, Ordering::Relaxed);
     }
 
+    /// Toggle expanded/compact panel size.
+    fn resize(&self) {
+        log::info!("D-Bus Resize() called");
+        self.state.resize_requested.store(true, Ordering::Relaxed);
+    }
+
     /// Check if the panel is visible.
     #[zbus(property)]
     fn visible(&self) -> bool {
@@ -141,6 +150,17 @@ pub async fn send_toggle() -> zbus::Result<()> {
         .await?;
 
     log::info!("Toggle sent to running instance");
+    Ok(())
+}
+
+/// Send Resize() to the running daemon (toggle expanded/compact).
+pub async fn send_resize() -> zbus::Result<()> {
+    let conn = zbus::Connection::session().await?;
+
+    conn.call_method(Some(DBUS_NAME), DBUS_PATH, Some(DBUS_NAME), "Resize", &())
+        .await?;
+
+    log::info!("Resize sent to running instance");
     Ok(())
 }
 
