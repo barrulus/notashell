@@ -166,7 +166,7 @@ The layer namespace is `notashell`. You can target it with any niri `layer-rule`
 
 ## Configuration
 
-Configuration is loaded from `~/.config/notashell/config.kdl`. All fields are optional and fall back to defaults.
+Configuration is loaded from `~/.config/notashell/config.kdl`. On first run, a default config file is created with all options commented out so you can see what's available. All fields are optional and fall back to defaults.
 
 ```kdl
 // Window position on screen
