@@ -194,7 +194,8 @@ fn refresh_mixer(
         let apps_list = apps_list.clone();
         let mgr_clone = Rc::clone(&mgr);
         mgr.get_apps(move |apps| {
-            mixer::populate_apps(&apps_list, &apps, &mgr_clone);
+            let sinks = state.borrow().audio_sinks.clone();
+            mixer::populate_apps(&apps_list, &apps, &sinks, &mgr_clone);
             state.borrow_mut().audio_apps = apps;
         });
     }

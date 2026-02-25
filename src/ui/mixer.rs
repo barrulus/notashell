@@ -8,7 +8,7 @@ use gtk4::{
 };
 
 use crate::controls::audio::{AudioApp, AudioManager, AudioSink, AudioSource};
-use crate::ui::mixer_row::{self, MixerRowCallbacks, MixerRowKind};
+use crate::ui::mixer_row::{self, MixerRowCallbacks, MixerRowKind, SinkInfo};
 use crate::ui::window::{MAX_LIST_HEIGHT, MIN_LIST_HEIGHT};
 
 /// All mixer UI handles needed by the app controller.
@@ -120,7 +120,9 @@ pub fn populate_sinks(list_box: &ListBox, sinks: &[AudioSink], manager: &Rc<Audi
                 on_mute_toggled: Box::new(move |muted| {
                     mgr2.set_sink_mute(idx, muted);
                 }),
+                on_sink_changed: None,
             },
+            None,
         );
         list_box.append(&row);
     }
@@ -161,14 +163,21 @@ pub fn populate_sources(
                 on_mute_toggled: Box::new(move |muted| {
                     mgr2.set_source_mute(idx, muted);
                 }),
+                on_sink_changed: None,
             },
+            None,
         );
         list_box.append(&row);
     }
 }
 
 /// Clear and repopulate the apps list.
-pub fn populate_apps(list_box: &ListBox, apps: &[AudioApp], manager: &Rc<AudioManager>) {
+pub fn populate_apps(
+    list_box: &ListBox,
+    apps: &[AudioApp],
+    sinks: &[AudioSink],
+    manager: &Rc<AudioManager>,
+) {
     clear_list(list_box);
 
     if apps.is_empty() {
@@ -178,11 +187,26 @@ pub fn populate_apps(list_box: &ListBox, apps: &[AudioApp], manager: &Rc<AudioMa
         return;
     }
 
+    let sink_list: Vec<(u32, String)> = sinks
+        .iter()
+        .map(|s| (s.index, s.description.clone()))
+        .collect();
+
     for app in apps {
         let icon = "\u{f001}"; // 🎵
         let mgr = Rc::clone(manager);
         let idx = app.index;
         let mgr2 = Rc::clone(manager);
+        let mgr3 = Rc::clone(manager);
+
+        let sink_info = if sink_list.len() > 1 {
+            Some(SinkInfo {
+                sinks: sink_list.clone(),
+                current_sink_index: app.sink_index,
+            })
+        } else {
+            None
+        };
 
         let row = mixer_row::build_mixer_row(
             icon,
@@ -198,7 +222,11 @@ pub fn populate_apps(list_box: &ListBox, apps: &[AudioApp], manager: &Rc<AudioMa
                 on_mute_toggled: Box::new(move |muted| {
                     mgr2.set_app_mute(idx, muted);
                 }),
+                on_sink_changed: Some(Box::new(move |sink_idx| {
+                    mgr3.move_app_to_sink(idx, sink_idx);
+                })),
             },
+            sink_info,
         );
         list_box.append(&row);
     }

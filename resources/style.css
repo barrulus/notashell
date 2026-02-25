@@ -502,6 +502,20 @@ switch slider {
   color: #ffffff;
 }
 
+.mixer-sink-dropdown {
+  font-size: 10px;
+  min-height: 18px;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  border: none;
+  border-radius: 6px;
+}
+
+.mixer-sink-dropdown:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 /* ── Tooltips ──────────────────────────────────────────────────────────────── */
 
 tooltip {

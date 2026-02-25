@@ -32,7 +32,6 @@ pub struct AudioSource {
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct AudioApp {
     pub index: u32,
     pub name: String,
@@ -476,7 +475,6 @@ impl AudioManager {
         });
     }
 
-    #[allow(dead_code)]
     pub fn move_app_to_sink(self: &Rc<Self>, app_index: u32, sink_index: u32) {
         let ctx = self.context.borrow();
         let mut intro = ctx.introspect();
