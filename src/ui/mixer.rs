@@ -1,15 +1,26 @@
 //! Audio mixer panel — three sections: Outputs (sinks), Inputs (sources), Applications.
+//!
+//! Rows are persistent: once created they're kept in `MixerWidgets` maps keyed
+//! by PulseAudio index, and the `sync_*` functions diff incoming state against
+//! the current rows, patching in place. This keeps a user's drag on a mixer
+//! slider uninterrupted while the footer master slider is also updating, since
+//! the slider widget they're holding is never destroyed.
 
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use gtk4::prelude::*;
 use gtk4::{
     Box as GtkBox, Label, ListBox, Orientation, PolicyType, ScrolledWindow, SelectionMode,
+    Widget,
 };
 
 use crate::controls::audio::{AudioApp, AudioManager, AudioSink, AudioSource};
-use crate::ui::mixer_row::{self, MixerRowCallbacks, MixerRowKind, SinkInfo};
+use crate::ui::mixer_row::{self, MixerRow, MixerRowCallbacks, MixerRowKind, SinkInfo};
 use crate::ui::window::{MAX_LIST_HEIGHT, MIN_LIST_HEIGHT};
+
+pub type MixerRowMap = Rc<RefCell<HashMap<u32, MixerRow>>>;
 
 /// All mixer UI handles needed by the app controller.
 pub struct MixerWidgets {
@@ -17,6 +28,9 @@ pub struct MixerWidgets {
     pub sinks_list: ListBox,
     pub sources_list: ListBox,
     pub apps_list: ListBox,
+    pub sink_rows: MixerRowMap,
+    pub source_rows: MixerRowMap,
+    pub app_rows: MixerRowMap,
 }
 
 /// Build the mixer layout with three sections inside a scrollable area.
@@ -28,7 +42,7 @@ pub fn build_mixer() -> MixerWidgets {
     let sinks_header = Label::new(Some("Outputs"));
     sinks_header.add_css_class("mixer-section-header");
     sinks_header.set_halign(gtk4::Align::Start);
-    sinks_header.set_margin_start(12);
+    sinks_header.set_margin_start(20);
     sinks_header.set_margin_top(8);
     sinks_header.set_margin_bottom(4);
 
@@ -44,7 +58,7 @@ pub fn build_mixer() -> MixerWidgets {
     let sources_header = Label::new(Some("Inputs"));
     sources_header.add_css_class("mixer-section-header");
     sources_header.set_halign(gtk4::Align::Start);
-    sources_header.set_margin_start(12);
+    sources_header.set_margin_start(20);
     sources_header.set_margin_top(8);
     sources_header.set_margin_bottom(4);
 
@@ -60,7 +74,7 @@ pub fn build_mixer() -> MixerWidgets {
     let apps_header = Label::new(Some("Applications"));
     apps_header.add_css_class("mixer-section-header");
     apps_header.set_halign(gtk4::Align::Start);
-    apps_header.set_margin_start(12);
+    apps_header.set_margin_start(20);
     apps_header.set_margin_top(8);
     apps_header.set_margin_bottom(4);
 
@@ -86,104 +100,173 @@ pub fn build_mixer() -> MixerWidgets {
         sinks_list,
         sources_list,
         apps_list,
+        sink_rows: Rc::new(RefCell::new(HashMap::new())),
+        source_rows: Rc::new(RefCell::new(HashMap::new())),
+        app_rows: Rc::new(RefCell::new(HashMap::new())),
     }
 }
 
-/// Clear and repopulate the sinks list.
-pub fn populate_sinks(list_box: &ListBox, sinks: &[AudioSink], manager: &Rc<AudioManager>) {
-    clear_list(list_box);
+/// Diff the incoming sink list against existing rows and patch in place.
+pub fn sync_sinks(
+    list_box: &ListBox,
+    rows: &MixerRowMap,
+    sinks: &[AudioSink],
+    manager: &Rc<AudioManager>,
+) {
+    let mut rows = rows.borrow_mut();
+    remove_empty_label(list_box);
 
     if sinks.is_empty() {
-        let empty = Label::new(Some("No output devices"));
-        empty.add_css_class("empty-label");
-        list_box.append(&empty);
+        for (_, row) in rows.drain() {
+            list_box.remove(&row.widget);
+        }
+        append_empty_label(list_box, "No output devices");
         return;
     }
 
-    for sink in sinks {
-        let icon = if sink.is_default { "\u{f028}" } else { "\u{f025}" }; // 🔊 / 🔉
-        let mgr = Rc::clone(manager);
-        let idx = sink.index;
-        let mgr2 = Rc::clone(manager);
+    // Drop rows whose PulseAudio index no longer exists.
+    let keep: HashSet<u32> = sinks.iter().map(|s| s.index).collect();
+    rows.retain(|idx, row| {
+        if keep.contains(idx) {
+            true
+        } else {
+            list_box.remove(&row.widget);
+            false
+        }
+    });
 
-        let row = mixer_row::build_mixer_row(
-            icon,
-            &sink.description,
-            sink.volume_percent,
-            sink.muted,
-            sink.is_default,
-            MixerRowKind::Sink,
-            MixerRowCallbacks {
-                on_volume_changed: Box::new(move |vol| {
-                    mgr.set_sink_volume(idx, vol);
-                }),
-                on_mute_toggled: Box::new(move |muted| {
-                    mgr2.set_sink_mute(idx, muted);
-                }),
-                on_sink_changed: None,
-            },
-            None,
-        );
-        list_box.append(&row);
+    for sink in sinks {
+        let icon = sink_icon(sink.is_default);
+        let tooltip = if sink.is_default {
+            "Default output"
+        } else {
+            "Click to set as default output"
+        };
+
+        if let Some(row) = rows.get(&sink.index) {
+            row.update_icon(icon);
+            row.update_name(&sink.description);
+            row.update_volume(sink.volume_percent);
+            row.update_muted(sink.muted);
+            row.update_default(sink.is_default);
+            row.set_tooltip(Some(tooltip));
+        } else {
+            let mgr_vol = Rc::clone(manager);
+            let mgr_mute = Rc::clone(manager);
+            let idx = sink.index;
+            let row = mixer_row::build_mixer_row(
+                icon,
+                &sink.description,
+                sink.volume_percent,
+                sink.muted,
+                sink.is_default,
+                MixerRowKind::Sink,
+                MixerRowCallbacks {
+                    on_volume_changed: Box::new(move |vol| {
+                        mgr_vol.set_sink_volume(idx, vol);
+                    }),
+                    on_mute_toggled: Box::new(move |muted| {
+                        mgr_mute.set_sink_mute(idx, muted);
+                    }),
+                    on_sink_changed: None,
+                },
+                None,
+            );
+            row.set_tooltip(Some(tooltip));
+            list_box.append(&row.widget);
+            rows.insert(sink.index, row);
+        }
     }
 }
 
-/// Clear and repopulate the sources list.
-pub fn populate_sources(
+/// Diff the incoming source list against existing rows and patch in place.
+pub fn sync_sources(
     list_box: &ListBox,
+    rows: &MixerRowMap,
     sources: &[AudioSource],
     manager: &Rc<AudioManager>,
 ) {
-    clear_list(list_box);
+    let mut rows = rows.borrow_mut();
+    remove_empty_label(list_box);
 
     if sources.is_empty() {
-        let empty = Label::new(Some("No input devices"));
-        empty.add_css_class("empty-label");
-        list_box.append(&empty);
+        for (_, row) in rows.drain() {
+            list_box.remove(&row.widget);
+        }
+        append_empty_label(list_box, "No input devices");
         return;
     }
 
+    let keep: HashSet<u32> = sources.iter().map(|s| s.index).collect();
+    rows.retain(|idx, row| {
+        if keep.contains(idx) {
+            true
+        } else {
+            list_box.remove(&row.widget);
+            false
+        }
+    });
+
     for source in sources {
         let icon = "\u{f130}"; // 🎤
-        let mgr = Rc::clone(manager);
-        let idx = source.index;
-        let mgr2 = Rc::clone(manager);
+        let tooltip = if source.is_default {
+            "Default input"
+        } else {
+            "Click to set as default input"
+        };
 
-        let row = mixer_row::build_mixer_row(
-            icon,
-            &source.description,
-            source.volume_percent,
-            source.muted,
-            source.is_default,
-            MixerRowKind::Source,
-            MixerRowCallbacks {
-                on_volume_changed: Box::new(move |vol| {
-                    mgr.set_source_volume(idx, vol);
-                }),
-                on_mute_toggled: Box::new(move |muted| {
-                    mgr2.set_source_mute(idx, muted);
-                }),
-                on_sink_changed: None,
-            },
-            None,
-        );
-        list_box.append(&row);
+        if let Some(row) = rows.get(&source.index) {
+            row.update_icon(icon);
+            row.update_name(&source.description);
+            row.update_volume(source.volume_percent);
+            row.update_muted(source.muted);
+            row.update_default(source.is_default);
+            row.set_tooltip(Some(tooltip));
+        } else {
+            let mgr_vol = Rc::clone(manager);
+            let mgr_mute = Rc::clone(manager);
+            let idx = source.index;
+            let row = mixer_row::build_mixer_row(
+                icon,
+                &source.description,
+                source.volume_percent,
+                source.muted,
+                source.is_default,
+                MixerRowKind::Source,
+                MixerRowCallbacks {
+                    on_volume_changed: Box::new(move |vol| {
+                        mgr_vol.set_source_volume(idx, vol);
+                    }),
+                    on_mute_toggled: Box::new(move |muted| {
+                        mgr_mute.set_source_mute(idx, muted);
+                    }),
+                    on_sink_changed: None,
+                },
+                None,
+            );
+            row.set_tooltip(Some(tooltip));
+            list_box.append(&row.widget);
+            rows.insert(source.index, row);
+        }
     }
 }
 
-/// Clear and repopulate the apps list.
-pub fn populate_apps(
+/// Diff the incoming apps list against existing rows and patch in place.
+pub fn sync_apps(
     list_box: &ListBox,
+    rows: &MixerRowMap,
     apps: &[AudioApp],
     sinks: &[AudioSink],
     manager: &Rc<AudioManager>,
 ) {
-    clear_list(list_box);
+    let mut rows = rows.borrow_mut();
+    remove_empty_label(list_box);
 
     if apps.is_empty() {
-        let empty = Label::new(Some("No apps playing"));
-        empty.add_css_class("empty-label");
-        list_box.append(&empty);
+        for (_, row) in rows.drain() {
+            list_box.remove(&row.widget);
+        }
+        append_empty_label(list_box, "No apps playing");
         return;
     }
 
@@ -191,49 +274,102 @@ pub fn populate_apps(
         .iter()
         .map(|s| (s.index, s.description.clone()))
         .collect();
+    let want_dropdown = sink_list.len() > 1;
+
+    let keep: HashSet<u32> = apps.iter().map(|a| a.index).collect();
+    rows.retain(|idx, row| {
+        if keep.contains(idx) {
+            true
+        } else {
+            list_box.remove(&row.widget);
+            false
+        }
+    });
+
+    // If the dropdown-visibility state has flipped (sinks went from 1 → 2+ or
+    // back), the row structure differs and we have to rebuild those rows. In
+    // practice this is rare; normal PA traffic just updates volume/mute.
+    rows.retain(|_, row| {
+        let row_has_dropdown = row.dropdown().is_some();
+        if row_has_dropdown != want_dropdown {
+            list_box.remove(&row.widget);
+            false
+        } else {
+            true
+        }
+    });
 
     for app in apps {
         let icon = "\u{f001}"; // 🎵
-        let mgr = Rc::clone(manager);
-        let idx = app.index;
-        let mgr2 = Rc::clone(manager);
-        let mgr3 = Rc::clone(manager);
 
-        let sink_info = if sink_list.len() > 1 {
-            Some(SinkInfo {
-                sinks: sink_list.clone(),
-                current_sink_index: app.sink_index,
-            })
+        if let Some(row) = rows.get(&app.index) {
+            row.update_icon(icon);
+            row.update_name(&app.name);
+            row.update_volume(app.volume_percent);
+            row.update_muted(app.muted);
+            row.update_sinks(&sink_list, app.sink_index);
         } else {
-            None
-        };
+            let mgr_vol = Rc::clone(manager);
+            let mgr_mute = Rc::clone(manager);
+            let mgr_move = Rc::clone(manager);
+            let idx = app.index;
 
-        let row = mixer_row::build_mixer_row(
-            icon,
-            &app.name,
-            app.volume_percent,
-            app.muted,
-            false,
-            MixerRowKind::App,
-            MixerRowCallbacks {
-                on_volume_changed: Box::new(move |vol| {
-                    mgr.set_app_volume(idx, vol);
-                }),
-                on_mute_toggled: Box::new(move |muted| {
-                    mgr2.set_app_mute(idx, muted);
-                }),
-                on_sink_changed: Some(Box::new(move |sink_idx| {
-                    mgr3.move_app_to_sink(idx, sink_idx);
-                })),
-            },
-            sink_info,
-        );
-        list_box.append(&row);
+            let sink_info = if want_dropdown {
+                Some(SinkInfo {
+                    sinks: sink_list.clone(),
+                    current_sink_index: app.sink_index,
+                })
+            } else {
+                None
+            };
+
+            let row = mixer_row::build_mixer_row(
+                icon,
+                &app.name,
+                app.volume_percent,
+                app.muted,
+                false,
+                MixerRowKind::App,
+                MixerRowCallbacks {
+                    on_volume_changed: Box::new(move |vol| {
+                        mgr_vol.set_app_volume(idx, vol);
+                    }),
+                    on_mute_toggled: Box::new(move |muted| {
+                        mgr_mute.set_app_mute(idx, muted);
+                    }),
+                    on_sink_changed: Some(Box::new(move |sink_idx| {
+                        mgr_move.move_app_to_sink(idx, sink_idx);
+                    })),
+                },
+                sink_info,
+            );
+            list_box.append(&row.widget);
+            rows.insert(app.index, row);
+        }
     }
 }
 
-fn clear_list(list_box: &ListBox) {
-    while let Some(row) = list_box.first_child() {
-        list_box.remove(&row);
+fn sink_icon(is_default: bool) -> &'static str {
+    if is_default { "\u{f028}" } else { "\u{f025}" }
+}
+
+fn append_empty_label(list_box: &ListBox, text: &str) {
+    let label = Label::new(Some(text));
+    label.add_css_class("empty-label");
+    list_box.append(&label);
+}
+
+/// Remove any direct-child empty-state label from the listbox.
+/// Leaves rows alone (rows are managed by the MixerRowMap).
+fn remove_empty_label(list_box: &ListBox) {
+    let mut child = list_box.first_child();
+    while let Some(c) = child {
+        let next = c.next_sibling();
+        if let Some(label) = c.downcast_ref::<Label>() {
+            if label.has_css_class("empty-label") {
+                list_box.remove(&c as &Widget);
+            }
+        }
+        child = next;
     }
 }

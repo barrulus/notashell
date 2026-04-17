@@ -60,6 +60,9 @@ pub struct PanelWidgets {
     pub audio_sources_list: ListBox,
     pub audio_apps_list: ListBox,
     pub audio_scroll: gtk4::ScrolledWindow,
+    pub audio_sink_rows: crate::ui::mixer::MixerRowMap,
+    pub audio_source_rows: crate::ui::mixer::MixerRowMap,
+    pub audio_app_rows: crate::ui::mixer::MixerRowMap,
     // Content stack
     pub content_stack: Stack,
     // Controls panel
@@ -80,7 +83,11 @@ pub fn build_window(app: &Application) -> PanelWidgets {
     window.init_layer_shell();
     window.set_namespace(Some("notashell"));
     window.set_layer(Layer::Top);
-    window.set_keyboard_mode(KeyboardMode::OnDemand);
+    // Exclusive (vs. OnDemand) so keyboard shortcuts work without the user
+    // having to click inside the panel first. The layer only holds the
+    // keyboard while it's visible, so this doesn't affect other windows
+    // once the panel is hidden.
+    window.set_keyboard_mode(KeyboardMode::Exclusive);
 
     // Apply position from config
     apply_position(&window, &config);
@@ -244,6 +251,9 @@ pub fn build_window(app: &Application) -> PanelWidgets {
         audio_sources_list: mixer_widgets.sources_list,
         audio_apps_list: mixer_widgets.apps_list,
         audio_scroll: mixer_widgets.scroll,
+        audio_sink_rows: mixer_widgets.sink_rows,
+        audio_source_rows: mixer_widgets.source_rows,
+        audio_app_rows: mixer_widgets.app_rows,
         content_stack,
         controls,
     }

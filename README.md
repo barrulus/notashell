@@ -120,7 +120,14 @@ notashell --toggle
 
 # Reload config and CSS without restarting
 notashell --reload
+
+# Toggle between compact and expanded panel height
+# (layer-shell panels have no grab handle, so size is toggled explicitly)
+notashell --resize
 ```
+
+Inside the panel, <kbd>Ctrl</kbd>+<kbd>E</kbd> toggles the expanded height (same
+action as `--resize`) and <kbd>Esc</kbd> hides the panel.
 
 ### Hyprland Integration
 

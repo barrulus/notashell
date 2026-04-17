@@ -443,6 +443,7 @@ switch slider {
 
 .mixer-row.default {
   background: rgba(53, 132, 228, 0.12);
+  box-shadow: inset 3px 0 0 0 #3584e4;
 }
 
 .mixer-row.default .mixer-name {

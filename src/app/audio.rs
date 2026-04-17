@@ -8,7 +8,7 @@ use std::rc::Rc;
 use gtk4::prelude::*;
 
 use crate::controls::audio::AudioManager;
-use crate::ui::mixer;
+use crate::ui::mixer::{self, MixerRowMap};
 use crate::ui::window::PanelWidgets;
 
 use super::AppState;
@@ -21,6 +21,9 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
     let sinks_list = widgets.audio_sinks_list.clone();
     let sources_list = widgets.audio_sources_list.clone();
     let apps_list = widgets.audio_apps_list.clone();
+    let sink_rows = Rc::clone(&widgets.audio_sink_rows);
+    let source_rows = Rc::clone(&widgets.audio_source_rows);
+    let app_rows = Rc::clone(&widgets.audio_app_rows);
     let audio_scroll = widgets.audio_scroll.clone();
     let status = widgets.status_label.clone();
     let switch = widgets.wifi_switch.clone();
@@ -33,6 +36,9 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
         let sinks_list = sinks_list.clone();
         let sources_list = sources_list.clone();
         let apps_list = apps_list.clone();
+        let sink_rows = Rc::clone(&sink_rows);
+        let source_rows = Rc::clone(&source_rows);
+        let app_rows = Rc::clone(&app_rows);
         let audio_scroll = audio_scroll.clone();
         let status = status.clone();
         let switch = switch.clone();
@@ -53,10 +59,21 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
             let sinks_list = sinks_list.clone();
             let sources_list = sources_list.clone();
             let apps_list = apps_list.clone();
+            let sink_rows = Rc::clone(&sink_rows);
+            let source_rows = Rc::clone(&source_rows);
+            let app_rows = Rc::clone(&app_rows);
             let audio_scroll = audio_scroll.clone();
 
             audio_scroll.set_visible(true);
-            refresh_mixer(&state, &sinks_list, &sources_list, &apps_list);
+            refresh_mixer(
+                &state,
+                &sinks_list,
+                &sources_list,
+                &apps_list,
+                &sink_rows,
+                &source_rows,
+                &app_rows,
+            );
         });
     }
 
@@ -66,6 +83,9 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
         let sinks_list_c = sinks_list.clone();
         let sources_list_c = sources_list.clone();
         let apps_list_c = apps_list.clone();
+        let sink_rows_c = Rc::clone(&sink_rows);
+        let source_rows_c = Rc::clone(&source_rows);
+        let app_rows_c = Rc::clone(&app_rows);
 
         sinks_list.connect_row_activated(move |_list, row| {
             let index = row.index() as usize;
@@ -79,7 +99,15 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
                 }
             }
             drop(st);
-            refresh_mixer(&state_c, &sinks_list_c, &sources_list_c, &apps_list_c);
+            refresh_mixer(
+                &state_c,
+                &sinks_list_c,
+                &sources_list_c,
+                &apps_list_c,
+                &sink_rows_c,
+                &source_rows_c,
+                &app_rows_c,
+            );
         });
     }
 
@@ -89,6 +117,9 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
         let sinks_list_c = sinks_list.clone();
         let sources_list_c = sources_list.clone();
         let apps_list_c = apps_list.clone();
+        let sink_rows_c = Rc::clone(&sink_rows);
+        let source_rows_c = Rc::clone(&source_rows);
+        let app_rows_c = Rc::clone(&app_rows);
 
         sources_list.connect_row_activated(move |_list, row| {
             let index = row.index() as usize;
@@ -101,7 +132,15 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
                 }
             }
             drop(st);
-            refresh_mixer(&state_c, &sinks_list_c, &sources_list_c, &apps_list_c);
+            refresh_mixer(
+                &state_c,
+                &sinks_list_c,
+                &sources_list_c,
+                &apps_list_c,
+                &sink_rows_c,
+                &source_rows_c,
+                &app_rows_c,
+            );
         });
     }
 
@@ -112,6 +151,9 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
         let sinks_list = sinks_list.clone();
         let sources_list = sources_list.clone();
         let apps_list = apps_list.clone();
+        let sink_rows = Rc::clone(&sink_rows);
+        let source_rows = Rc::clone(&source_rows);
+        let app_rows = Rc::clone(&app_rows);
 
         // on_change callback: refresh mixer when PA events fire (only if audio tab active)
         let audio_tab_change = audio_tab.clone();
@@ -119,6 +161,9 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
         let sinks_list_change = sinks_list.clone();
         let sources_list_change = sources_list.clone();
         let apps_list_change = apps_list.clone();
+        let sink_rows_change = Rc::clone(&sink_rows);
+        let source_rows_change = Rc::clone(&source_rows);
+        let app_rows_change = Rc::clone(&app_rows);
 
         let on_change = move || {
             if audio_tab_change.is_active() {
@@ -127,6 +172,9 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
                     &sinks_list_change,
                     &sources_list_change,
                     &apps_list_change,
+                    &sink_rows_change,
+                    &source_rows_change,
+                    &app_rows_change,
                 );
             }
         };
@@ -155,11 +203,15 @@ pub(super) fn setup_audio(widgets: &PanelWidgets, state: Rc<RefCell<AppState>>) 
 }
 
 /// Refresh all three mixer sections from PulseAudio state.
+#[allow(clippy::too_many_arguments)]
 fn refresh_mixer(
     state: &Rc<RefCell<AppState>>,
     sinks_list: &gtk4::ListBox,
     sources_list: &gtk4::ListBox,
     apps_list: &gtk4::ListBox,
+    sink_rows: &MixerRowMap,
+    source_rows: &MixerRowMap,
+    app_rows: &MixerRowMap,
 ) {
     let mgr = match state.borrow().audio.clone() {
         Some(m) => m,
@@ -170,9 +222,10 @@ fn refresh_mixer(
     {
         let state = Rc::clone(state);
         let sinks_list = sinks_list.clone();
+        let sink_rows = Rc::clone(sink_rows);
         let mgr_clone = Rc::clone(&mgr);
         mgr.get_sinks(move |sinks| {
-            mixer::populate_sinks(&sinks_list, &sinks, &mgr_clone);
+            mixer::sync_sinks(&sinks_list, &sink_rows, &sinks, &mgr_clone);
             state.borrow_mut().audio_sinks = sinks;
         });
     }
@@ -181,9 +234,10 @@ fn refresh_mixer(
     {
         let state = Rc::clone(state);
         let sources_list = sources_list.clone();
+        let source_rows = Rc::clone(source_rows);
         let mgr_clone = Rc::clone(&mgr);
         mgr.get_sources(move |sources| {
-            mixer::populate_sources(&sources_list, &sources, &mgr_clone);
+            mixer::sync_sources(&sources_list, &source_rows, &sources, &mgr_clone);
             state.borrow_mut().audio_sources = sources;
         });
     }
@@ -192,10 +246,11 @@ fn refresh_mixer(
     {
         let state = Rc::clone(state);
         let apps_list = apps_list.clone();
+        let app_rows = Rc::clone(app_rows);
         let mgr_clone = Rc::clone(&mgr);
         mgr.get_apps(move |apps| {
             let sinks = state.borrow().audio_sinks.clone();
-            mixer::populate_apps(&apps_list, &apps, &sinks, &mgr_clone);
+            mixer::sync_apps(&apps_list, &app_rows, &apps, &sinks, &mgr_clone);
             state.borrow_mut().audio_apps = apps;
         });
     }
@@ -207,13 +262,24 @@ pub(super) fn setup_audio_scan_button(widgets: &PanelWidgets, state: Rc<RefCell<
     let sinks_list = widgets.audio_sinks_list.clone();
     let sources_list = widgets.audio_sources_list.clone();
     let apps_list = widgets.audio_apps_list.clone();
+    let sink_rows = Rc::clone(&widgets.audio_sink_rows);
+    let source_rows = Rc::clone(&widgets.audio_source_rows);
+    let app_rows = Rc::clone(&widgets.audio_app_rows);
     let scan_btn = widgets.scan_button.clone();
 
     scan_btn.connect_clicked(move |_btn| {
         if !audio_tab.is_active() {
             return;
         }
-        refresh_mixer(&state, &sinks_list, &sources_list, &apps_list);
+        refresh_mixer(
+            &state,
+            &sinks_list,
+            &sources_list,
+            &apps_list,
+            &sink_rows,
+            &source_rows,
+            &app_rows,
+        );
     });
 }
 

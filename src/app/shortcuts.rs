@@ -10,14 +10,29 @@ use crate::ui::window::{self, PanelWidgets};
 
 use super::{AppState, refresh_list};
 
-/// Set up Escape key handler to hide panel (with proper state tracking).
+/// Handle Escape (hide panel) and Ctrl+E (toggle expanded height) via a
+/// single window-level key controller in the Capture phase.
+///
+/// Capture is deliberate: without it, a focused text entry (e.g. the Wi-Fi
+/// password field, a GtkText descendant) claims Ctrl+E as Emacs-style
+/// "move to end of line" before the window handler sees it. Capture phase
+/// runs the window controller first, before the focused widget.
 pub(super) fn setup_escape_key(widgets: &PanelWidgets, panel_state: crate::daemon::PanelState) {
-    use gtk4::{gdk, glib, prelude::*, EventControllerKey};
-    
+    use gtk4::{EventControllerKey, PropagationPhase, gdk, glib, prelude::*};
+
     let key_controller = EventControllerKey::new();
-    key_controller.connect_key_pressed(move |_, key, _, _| {
+    key_controller.set_propagation_phase(PropagationPhase::Capture);
+    key_controller.connect_key_pressed(move |_, key, _, mods| {
         if key == gdk::Key::Escape {
             panel_state.hide();
+            return glib::Propagation::Stop;
+        }
+        if mods.contains(gdk::ModifierType::CONTROL_MASK)
+            && matches!(key, gdk::Key::e | gdk::Key::E)
+        {
+            panel_state
+                .resize_requested
+                .store(true, std::sync::atomic::Ordering::Relaxed);
             return glib::Propagation::Stop;
         }
         glib::Propagation::Proceed
@@ -42,12 +57,21 @@ pub(super) fn setup_resize_on_request(
             let is_expanded = !expanded.get();
             expanded.set(is_expanded);
 
-            let max_h = if is_expanded {
-                window::EXPANDED_MAX_LIST_HEIGHT
+            // Raising max alone is invisible when content already fits — also
+            // raise the min so the scroll area actually takes up the extra
+            // space and the panel grows visibly.
+            let (min_h, max_h) = if is_expanded {
+                (
+                    window::EXPANDED_MAX_LIST_HEIGHT,
+                    window::EXPANDED_MAX_LIST_HEIGHT,
+                )
             } else {
-                window::MAX_LIST_HEIGHT
+                (window::MIN_LIST_HEIGHT, window::MAX_LIST_HEIGHT)
             };
 
+            network_scroll.set_min_content_height(min_h);
+            bt_scroll.set_min_content_height(min_h);
+            audio_scroll.set_min_content_height(min_h);
             network_scroll.set_max_content_height(max_h);
             bt_scroll.set_max_content_height(max_h);
             audio_scroll.set_max_content_height(max_h);
